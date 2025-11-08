@@ -4,27 +4,29 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from datareader import get_data_loaders, NEW_CLASS_NAMES
-from model import SimpleCNN
+# Ganti SimpleCNN dengan ResNet18Model
+from model import ResNet18Model
 import matplotlib.pyplot as plt
 from utils import plot_training_history, visualize_random_val_predictions
 
 # --- Hyperparameter ---
-EPOCHS = 16
-BATCH_SIZE = 16
+EPOCHS = 15
+BATCH_SIZE = 15
 LEARNING_RATE = 0.0003
 
-#Menampilkan plot riwayat training dan validasi setelah training selesai.
-
 def train():
+    # device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # 1. Memuat Data
     train_loader, val_loader, num_classes, in_channels = get_data_loaders(BATCH_SIZE)
     
-    # 2. Inisialisasi Model
-    model = SimpleCNN(in_channels=in_channels, num_classes=num_classes)
+    # 2. Inisialisasi Model (ResNet-18 yang dimodifikasi)
+    model = ResNet18Model(in_channels=in_channels, num_classes=num_classes, pretrained=False)
+    model = model.to(device)
     print(model)
     
     # 3. Mendefinisikan Loss Function dan Optimizer
-    # Gunakan BCEWithLogitsLoss untuk klasifikasi biner. Ini lebih stabil secara numerik.
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     
@@ -44,12 +46,11 @@ def train():
         train_total = 0
         
         for images, labels in train_loader:
-            images = images
-            # Ubah tipe data label menjadi float untuk BCEWithLogitsLoss
-            labels = labels.float()
+            images = images.to(device)
+            labels = labels.float().to(device)  # BCEWithLogitsLoss expects float
             
-            outputs = model(images)
-            loss = criterion(outputs, labels) # Loss dihitung antara output tunggal dan label
+            outputs = model(images)  # shape: (batch, 1) jika num_classes==2
+            loss = criterion(outputs, labels)
             
             optimizer.zero_grad()
             loss.backward()
@@ -57,8 +58,8 @@ def train():
             
             running_loss += loss.item()
             
-            # Hitung training accuracy
-            predicted = (outputs > 0).float()
+            # Hitung training accuracy (threshold pada 0.5 setelah sigmoid)
+            predicted = (torch.sigmoid(outputs) > 0.5).float()
             train_total += labels.size(0)
             train_correct += (predicted == labels).sum().item()
         
@@ -73,14 +74,14 @@ def train():
         
         with torch.no_grad():
             for images, labels in val_loader:
-                images = images
-                labels = labels.float()
+                images = images.to(device)
+                labels = labels.float().to(device)
                 
                 outputs = model(images)
                 val_loss = criterion(outputs, labels)
                 val_running_loss += val_loss.item()
                 
-                predicted = (outputs > 0).float()
+                predicted = (torch.sigmoid(outputs) > 0.5).float()
                 val_total += labels.size(0)
                 val_correct += (predicted == labels).sum().item()
         
@@ -99,6 +100,9 @@ def train():
 
     print("--- Training Selesai ---")
     
+    # Pindahkan model ke CPU sebelum visualisasi/plot agar matplotlib tidak error saat mengambil tensor ke numpy
+    model = model.to("cpu")
+    
     # Tampilkan plot
     plot_training_history(train_losses_history, val_losses_history, 
                          train_accs_history, val_accs_history)
@@ -108,4 +112,3 @@ def train():
 
 if __name__ == '__main__':
     train()
-    

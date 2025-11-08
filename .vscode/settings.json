@@ -1,0 +1,8 @@
+{
+    "python.analysis.extraPaths": [
+        "./MedMNIST/examples/dataset_without_py",
+        "./MedMNIST",
+        "./MedMNIST/examples/dataset_without_py",
+        "./MedMNIST/examples/dataset_without_py"
+    ]
+}

@@ -1,8 +1,8 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import torchvision.transforms as transforms
-from torch.utils.data import DataLoader, Dataset
+import torch # type: ignore
+import numpy as np # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+import torchvision.transforms as transforms # type: ignore
+from torch.utils.data import DataLoader, Dataset # type: ignore
 from medmnist import ChestMNIST
 
 # --- Konfigurasi Kelas Biner ---
@@ -152,6 +152,27 @@ def show_class_distribution(split='train'):
     print(f"{'='*60}\n")
     
     return sorted_classes
+
+# Tambahkan konstanta augmentasi (atur sesuai kebutuhan)
+ROTATION_DEGREES = 15  # rotasi acak dalam rentang [-15, 15] derajat
+
+# Transform untuk data training: sertakan RandomRotation (augmentasi)
+train_transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.RandomRotation(ROTATION_DEGREES, fill=0),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.Resize((28, 28)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5], std=[0.5]),
+])
+
+# Transform untuk validasi: tanpa augmentasi rotasi
+val_transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((28, 28)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5], std=[0.5]),
+])
 
 if __name__ == '__main__':
     print("Memuat dataset untuk plotting...")
